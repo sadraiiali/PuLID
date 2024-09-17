@@ -1,3 +1,29 @@
+[project]
+name = "pulid"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate>=0.34.2",
+    "diffusers==0.25.0",
+    "einops>=0.8.0",
+    "facexlib>=0.3.0",
+    "ftfy>=6.2.3",
+    "gradio>=4.0.0",
+    "httpx==0.23.3",
+    "insightface>=0.7.3",
+    "onnxruntime>=1.19.2",
+    "onnxruntime-gpu>=1.19.2",
+    "opencv-python>=4.10.0.84",
+    "safetensors>=0.4.5",
+    "sentencepiece>=0.2.0",
+    "timm>=1.0.9",
+    "torch==2.0.1",
+    "torchvision==0.15.2",
+    "transformers==4.43.3",
+]
+
 [tool.ruff]
 line-length = 120
 # Deprecation of Cuda 11.6, Python 3.7 support for PyTorch 2.0
