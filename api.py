@@ -2,11 +2,13 @@ import time
 import torch
 from einops import rearrange
 from PIL import Image
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, UploadFile,HTTPException
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import numpy as np
+import uuid 
+import re
 
 from flux.sampling import denoise, get_noise, get_schedule, prepare, unpack
 from flux.util import (
@@ -19,6 +21,12 @@ from flux.util import (
 )
 from pulid.pipeline_flux import PuLIDPipeline
 from pulid.utils import resize_numpy_image_long
+import os
+
+CURRENT_FOLDER = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_FOLDER = os.path.join(CURRENT_FOLDER, "output")
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
 
 app = FastAPI()
 
@@ -228,7 +236,7 @@ async def generate_image_endpoint(
         id_image_data = Image.open(id_image.file)
         # turn it to numpy array
         id_image_data = np.array(id_image_data)
-
+    start_time = time.time()
     output_image, seed_output, intermediate_output = generator.generate_image(
         width,
         height,
@@ -244,11 +252,36 @@ async def generate_image_endpoint(
         timestep_to_start_cfg,
         max_sequence_length,
     )
+    end_time = time.time()
 
-    output_image.save("generated_image.png")
+    random_new_output_id = str(uuid.uuid4())
+    image_name = f"{random_new_output_id}.png"
+    image_path = os.path.join(OUTPUT_FOLDER, image_name)
+    output_image.save(image_path)
     return JSONResponse(
-        content={"message": "Image generated successfully", "seed": seed_output}
+        content={
+            "image": image_name,
+            "seed": seed_output,
+            "generation_time": end_time - start_time,
+        }
     )
+
+
+
+@app.get("/download_image/{image_name}")
+async def download_image(image_name: str):
+    # Check if the image name follows the UUID format and ends with .png
+    if not re.match(r"^[0-9a-fA-F-]{36}\.png$", image_name):
+        raise HTTPException(status_code=400, detail="Invalid image name format")
+
+    image_path = os.path.join(OUTPUT_FOLDER, image_name)
+    
+    # Check if the file exists
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    return FileResponse(image_path, media_type='image/png', filename=image_name)
+
 
 
 if __name__ == "__main__":
