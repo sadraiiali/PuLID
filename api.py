@@ -21,19 +21,6 @@ from pulid.utils import resize_numpy_image_long
 
 app = FastAPI()
 
-class ImageGenerationRequest(BaseModel):
-    width: int
-    height: int
-    num_steps: int
-    start_step: int
-    guidance: float
-    seed: int
-    prompt: str
-    id_weight: float = 1.0
-    neg_prompt: str = ""
-    true_cfg: float = 1.0
-    timestep_to_start_cfg: int = 1
-    max_sequence_length: int = 128
 
 def get_models(name: str, device: torch.device, offload: bool, fp8: bool):
     t5 = load_t5(device, max_length=128)
@@ -46,8 +33,16 @@ def get_models(name: str, device: torch.device, offload: bool, fp8: bool):
     ae = load_ae(name, device="cpu" if offload else device)
     return model, ae, t5, clip
 
+
 class FluxGenerator:
-    def __init__(self, model_name: str, device: str, offload: bool, aggressive_offload: bool, args):
+    def __init__(
+        self,
+        model_name: str,
+        device: str,
+        offload: bool,
+        aggressive_offload: bool,
+        args,
+    ):
         self.device = torch.device(device)
         self.offload = offload
         self.aggressive_offload = aggressive_offload
@@ -205,39 +200,55 @@ class FluxGenerator:
 
         img = Image.fromarray((127.5 * (x + 1.0)).cpu().byte().numpy())
         return img, str(opts.seed), self.pulid_model.debug_img_list
-args = {
-    "fp8": True,
-    "onnx_provider": "gpu",
-    "pretrained_model": None,
-    "dev": True
-}
+
+
+args = {"fp8": True, "onnx_provider": "gpu", "pretrained_model": None, "dev": True}
 generator = FluxGenerator("flux-dev", "cuda", False, False, args)
 
+
 @app.post("/generate_image")
-async def generate_image_endpoint(request: ImageGenerationRequest, id_image: Optional[UploadFile] = None):
+async def generate_image_endpoint(
+    width: int = 1024,
+    height: int = 1024,
+    num_steps: int = 10,
+    start_step: int = 4,
+    guidance: float = 4,
+    seed: int = 17733156847328193625,
+    prompt: str = "portrait, side view",
+    id_weight: float = 1.0,
+    neg_prompt: str = "",
+    true_cfg: float = 1.0,
+    timestep_to_start_cfg: int = 1,
+    max_sequence_length: int = 128,
+    id_image: Optional[UploadFile] = None,
+):
     id_image_data = None
     if id_image:
         id_image_data = Image.open(id_image.file)
-    
+
     output_image, seed_output, intermediate_output = generator.generate_image(
-        request.width,
-        request.height,
-        request.num_steps,
-        request.start_step,
-        request.guidance,
-        request.seed,
-        request.prompt,
+        width,
+        height,
+        num_steps,
+        start_step,
+        guidance,
+        seed,
+        prompt,
         id_image_data,
-        request.id_weight,
-        request.neg_prompt,
-        request.true_cfg,
-        request.timestep_to_start_cfg,
-        request.max_sequence_length,
+        id_weight,
+        neg_prompt,
+        true_cfg,
+        timestep_to_start_cfg,
+        max_sequence_length,
     )
 
     output_image.save("generated_image.png")
-    return JSONResponse(content={"message": "Image generated successfully", "seed": seed_output})
+    return JSONResponse(
+        content={"message": "Image generated successfully", "seed": seed_output}
+    )
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8080)
