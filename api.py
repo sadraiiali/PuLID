@@ -211,7 +211,7 @@ args = {
     "pretrained_model": None,
     "dev": True
 }
-generator = FluxGenerator("flux-dev", "cuda", False, False, args)
+generator = FluxGenerator("flux-dev", "cuda", False, False, **args)
 
 @app.post("/generate_image")
 async def generate_image_endpoint(request: ImageGenerationRequest, id_image: Optional[UploadFile] = None):
