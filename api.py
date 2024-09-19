@@ -56,13 +56,13 @@ class FluxGenerator:
             model_name,
             device=self.device,
             offload=self.offload,
-            fp8=args.fp8,
+            fp8=args["fp8"],
         )
         self.pulid_model = PuLIDPipeline(
             self.model,
             device="cpu" if offload else device,
             weight_dtype=torch.bfloat16,
-            onnx_provider=args.onnx_provider,
+            onnx_provider=args["onnx_provider"],
         )
         if offload:
             self.pulid_model.face_helper.face_det.mean_tensor = (
@@ -73,7 +73,7 @@ class FluxGenerator:
             self.pulid_model.face_helper.face_det.device = torch.device("cuda")
             self.pulid_model.face_helper.device = torch.device("cuda")
             self.pulid_model.device = torch.device("cuda")
-        self.pulid_model.load_pretrain(args.pretrained_model)
+        self.pulid_model.load_pretrain(args["pretrained_model"])
 
     @torch.inference_mode()
     def generate_image(
@@ -211,7 +211,7 @@ args = {
     "pretrained_model": None,
     "dev": True
 }
-generator = FluxGenerator("flux-dev", "cuda", False, False, **args)
+generator = FluxGenerator("flux-dev", "cuda", False, False, args)
 
 @app.post("/generate_image")
 async def generate_image_endpoint(request: ImageGenerationRequest, id_image: Optional[UploadFile] = None):
