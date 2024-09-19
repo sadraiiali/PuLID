@@ -205,17 +205,16 @@ class FluxGenerator:
 
         img = Image.fromarray((127.5 * (x + 1.0)).cpu().byte().numpy())
         return img, str(opts.seed), self.pulid_model.debug_img_list
+args = {
+    "fp8": True,
+    "onnx_provider": "gpu",
+    "pretrained_model": None,
+    "dev": True
+}
+generator = FluxGenerator("flux-dev", "cuda", False, False, args)
 
 @app.post("/generate_image")
 async def generate_image_endpoint(request: ImageGenerationRequest, id_image: Optional[UploadFile] = None):
-    args = {
-        "fp8": False,
-        "onnx_provider": "gpu",
-        "pretrained_model": "path_to_pretrained_model",
-        "dev": False
-    }
-    generator = FluxGenerator("flux-dev", "cuda", False, False, args)
-    
     id_image_data = None
     if id_image:
         id_image_data = Image.open(id_image.file)
