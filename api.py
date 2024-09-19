@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
+import numpy as np
 
 from flux.sampling import denoise, get_noise, get_schedule, prepare, unpack
 from flux.util import (
@@ -225,6 +226,8 @@ async def generate_image_endpoint(
     id_image_data = None
     if id_image:
         id_image_data = Image.open(id_image.file)
+        # turn it to numpy array
+        id_image_data = np.array(id_image_data)
 
     output_image, seed_output, intermediate_output = generator.generate_image(
         width,
